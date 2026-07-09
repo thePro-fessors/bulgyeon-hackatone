@@ -29,6 +29,15 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        private val _staticEmergencySignal = MutableSharedFlow<EmergencyType>(extraBufferCapacity = 1)
+        val staticEmergencySignal = _staticEmergencySignal.asSharedFlow()
+
+        fun triggerEmergency(type: EmergencyType) {
+            _staticEmergencySignal.tryEmit(type)
+        }
+    }
+
     private var volumeDownPressJob: Job? = null
 
     // 처음 시작은 스플래시 화면이므로 기본값을 세팅해둡니다.
@@ -121,6 +130,12 @@ fun SafetyAppNavigation(
 
     LaunchedEffect(emergencySignal) {
         emergencySignal.collect { type ->
+            navController.navigate("emergency/${type.name}")
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        MainActivity.staticEmergencySignal.collect { type ->
             navController.navigate("emergency/${type.name}")
         }
     }

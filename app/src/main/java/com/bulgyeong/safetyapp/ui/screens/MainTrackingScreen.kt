@@ -388,6 +388,29 @@ fun MainTrackingScreen(
                     Text("작업 종료", fontSize = 20.sp, color = FigmaWhite)
                 }
 
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // 낙상 시뮬레이션 테스트 버튼
+                Button(
+                    onClick = {
+                        if (LocationTrackingService.activeServiceInstance != null) {
+                            LocationTrackingService.simulateFall()
+                        } else {
+                            onEmergency(EmergencyType.FALL)
+                            Toast.makeText(context, "⚠️ 위치 추적(서비스)이 시작되지 않아 비상 화면만 노출합니다.", Toast.LENGTH_LONG).show()
+                        }
+                    },
+                    modifier = Modifier
+                        .width(251.dp)
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = AlertRed),
+                    shape = RoundedCornerShape(1000.dp)
+                ) {
+                    Text("낙상 시뮬레이션 🚨", fontSize = 16.sp, color = FigmaWhite, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
                 // SOS 버튼
                 Box(
                     modifier = Modifier

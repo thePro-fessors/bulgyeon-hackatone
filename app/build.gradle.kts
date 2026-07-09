@@ -47,6 +47,10 @@ android {
             useLegacyPackaging = false
         }
     }
+    
+    aaptOptions {
+        noCompress("tflite")
+    }
 }
 
 dependencies {
@@ -72,6 +76,9 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
-    // ML Kit Barcode Scanning
-    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    // ML Kit Barcode Scanning (Play Services based to bypass 16 KB JNI errors)
+    implementation("com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1")
+
+    // TensorFlow Lite
+    implementation("org.tensorflow:tensorflow-lite:2.16.1")
 }

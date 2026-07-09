@@ -31,6 +31,11 @@ class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listene
     private lateinit var pdrNavigator: PdrNavigator
     private lateinit var stateMachine: TrackingStateMachine
 
+    private lateinit var fallDetectionManager: com.bulgyeong.safetyapp.sensor.FallDetectionManager
+    private lateinit var bleEmergencyBroadcaster: com.bulgyeong.safetyapp.ble.BleEmergencyBroadcaster
+    private var lastKnownLat = 35.1595
+    private var lastKnownLon = 129.0430
+
     private var lastGpsTimestamp = 0L
 
     override fun onCreate() {
@@ -45,6 +50,13 @@ class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listene
         startForegroundServiceNotification()
         stateMachine.start()
         requestLocationUpdates()
+
+        bleEmergencyBroadcaster = com.bulgyeong.safetyapp.ble.BleEmergencyBroadcaster(this)
+        fallDetectionManager = com.bulgyeong.safetyapp.sensor.FallDetectionManager(this) { probability ->
+            handleFallDetected(probability)
+        }
+        fallDetectionManager.start()
+        activeServiceInstance = this
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -54,9 +66,17 @@ class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listene
 
     override fun onDestroy() {
         super.onDestroy()
+        activeServiceInstance = null
         stopLocationUpdates()
         bleScanner.stopScanning()
         pdrNavigator.stop()
+
+        if (::fallDetectionManager.isInitialized) {
+            fallDetectionManager.stop()
+        }
+        if (::bleEmergencyBroadcaster.isInitialized) {
+            bleEmergencyBroadcaster.stopAdvertising()
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -112,6 +132,8 @@ class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listene
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 val location = result.lastLocation ?: return
+                lastKnownLat = location.latitude
+                lastKnownLon = location.longitude
                 lastGpsTimestamp = System.currentTimeMillis()
                 stateMachine.onGpsLocation(location.accuracy)
                 repository.appendTrackingRecord(location.toTrackingRecord("gps"))
@@ -210,6 +232,8 @@ class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listene
     override fun onAnchorDetected(anchorLat: Double, anchorLon: Double) {
         pdrNavigator.applyAnchorCorrection(anchorLat, anchorLon)
         val correctedPosition = pdrNavigator.getAbsoluteGeoPosition()
+        lastKnownLat = correctedPosition.first
+        lastKnownLon = correctedPosition.second
 
         // 앵커 절대 보정 좌표 서버 보고 연동
         val employeeId = com.bulgyeong.safetyapp.data.api.SessionManager.currentUser?.employeeId
@@ -248,10 +272,23 @@ class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listene
         repository.appendSensorSample(
             "{\"type\":\"ble_scan\",\"timestamp\":${System.currentTimeMillis()},\"readings\":${readings.map { "{\\\"macAddress\\\":\\\"${it.macAddress}\\\",\\\"rssi\\\":${it.rssi},\\\"distance\\\":${it.estimatedDistanceMeters}}" }}}"
         )
+        // BLE 목격자 로그 저장 (사후 삼각측량 기반 확보)
+        readings.forEach { r ->
+            repository.appendWitnessRecord(
+                com.bulgyeong.safetyapp.location.WitnessRecord(
+                    timestamp = System.currentTimeMillis(),
+                    peerId = r.macAddress,
+                    rssi = r.rssi,
+                    distance = r.estimatedDistanceMeters
+                )
+            )
+        }
         stateMachine.onBleReadings(readings)
         updateLocationText("📶 BLE 스캔 중\n감지된 비콘 수: ${readings.size}개")
         val estimated = bleScanner.estimateLocationFromReadings(readings)
         estimated?.let { (lat, lon) ->
+            lastKnownLat = lat
+            lastKnownLon = lon
             updateLocationText("📶 BLE 신호 기반 위치 추정 완료\n위도: ${String.format("%.5f", lat)}\n경도: ${String.format("%.5f", lon)}")
 
             // BLE 기반 추정 위치 서버 보고 연동
@@ -310,9 +347,41 @@ class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listene
         repository.appendSensorSample("{\"type\":\"pdr\",\"timestamp\":$timestamp,\"payload\":$json}")
     }
 
+    private fun handleFallDetected(probability: Double) {
+        val employeeId = com.bulgyeong.safetyapp.data.api.SessionManager.currentUser?.employeeId ?: return
+        
+        // BLE 백그라운드 브로드캐스팅 비상 전파 기동
+        if (::bleEmergencyBroadcaster.isInitialized) {
+            bleEmergencyBroadcaster.startAdvertising(employeeId, lastKnownLat, lastKnownLon)
+        }
+
+        // 서버 낙상 비상 API 보고
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                com.bulgyeong.safetyapp.data.api.RetrofitClient.api.reportEmergency(
+                    com.bulgyeong.safetyapp.data.api.EmergencyRequest(employeeId, "FALL")
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        // MainActivity를 통해 긴급 구조 화면으로 자동 이동(낙상 플래그 유형 전달)
+        com.bulgyeong.safetyapp.MainActivity.triggerEmergency(com.bulgyeong.safetyapp.ui.screens.EmergencyType.FALL)
+    }
+
     companion object {
         private const val NOTIFICATION_ID = 9012
         private const val CHANNEL_ID = "location_tracking_channel"
+
+        @Volatile
+        var activeServiceInstance: LocationTrackingService? = null
+
+        fun simulateFall() {
+            activeServiceInstance?.let { service ->
+                service.handleFallDetected(1.0)
+            }
+        }
 
         private val _lastLocationText = MutableStateFlow("📡 추적 시작 대기 중...")
         val lastLocationText = _lastLocationText.asStateFlow()
