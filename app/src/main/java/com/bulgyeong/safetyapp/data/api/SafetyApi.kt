@@ -6,6 +6,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Query
+import android.content.Context
 
 // Models
 data class LoginRequest(val employeeId: String)
@@ -47,8 +48,8 @@ interface SafetyApiService {
 }
 
 object RetrofitClient {
-    // 10.0.2.2 points to localhost of the host machine from Android Emulator
-    private const val BASE_URL = "http://10.0.2.2:3000"
+    // Local IP address of the host machine (Macbook) for device debugging
+    private const val BASE_URL = "http://192.168.2.82:3000"
 
     val api: SafetyApiService by lazy {
         Retrofit.Builder()
@@ -60,6 +61,64 @@ object RetrofitClient {
 }
 
 object SessionManager {
+    private const val PREFS_NAME = "safety_app_prefs"
+    private const val KEY_IS_LOGGED_IN = "is_logged_in"
+    private const val KEY_EMPLOYEE_ID = "employee_id"
+    private const val KEY_EMPLOYEE_NAME = "employee_name"
+    private const val KEY_IS_WORKING = "is_working"
+    private const val KEY_AREA_ID = "area_id"
+    private const val KEY_AREA_NAME = "area_name"
+
     var currentUser: User? = null
     var currentArea: Area? = null
+
+    fun init(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val empId = prefs.getString(KEY_EMPLOYEE_ID, null)
+        val empName = prefs.getString(KEY_EMPLOYEE_NAME, null)
+        if (empId != null && empName != null) {
+            currentUser = User(empId, empName)
+        }
+        val areaId = prefs.getString(KEY_AREA_ID, null)
+        val areaName = prefs.getString(KEY_AREA_NAME, null)
+        if (areaId != null && areaName != null) {
+            currentArea = Area(areaId, areaName, 0)
+        }
+    }
+
+    fun login(context: Context, user: User) {
+        currentUser = user
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_IS_LOGGED_IN, true)
+            .putString(KEY_EMPLOYEE_ID, user.employeeId)
+            .putString(KEY_EMPLOYEE_NAME, user.name)
+            .apply()
+    }
+
+    fun startWork(context: Context, area: Area) {
+        currentArea = area
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_IS_WORKING, true)
+            .putString(KEY_AREA_ID, area.id)
+            .putString(KEY_AREA_NAME, area.name)
+            .apply()
+    }
+
+    fun endWork(context: Context) {
+        currentUser = null
+        currentArea = null
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .clear()
+            .apply()
+    }
+
+    fun isWorking(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_IS_WORKING, false)
+    }
+
+    fun isLoggedIn(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_IS_LOGGED_IN, false)
+    }
 }

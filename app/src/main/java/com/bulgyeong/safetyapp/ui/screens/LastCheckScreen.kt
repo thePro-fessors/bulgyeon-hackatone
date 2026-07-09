@@ -73,6 +73,9 @@ fun LastCheckScreen(onNavigateToMain: () -> Unit) {
                 try {
                     val res = RetrofitClient.api.startWork(StartWorkRequest(employeeId, areaId, durationMinutes))
                     if (res.success) {
+                        SessionManager.currentArea?.let { area ->
+                            SessionManager.startWork(context, area)
+                        }
                         onNavigateToMain()
                     } else {
                         Toast.makeText(context, "작업 시작 실패: ${res.message}", Toast.LENGTH_SHORT).show()

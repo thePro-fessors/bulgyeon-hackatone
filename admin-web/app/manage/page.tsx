@@ -288,12 +288,12 @@ export default function ManagePage() {
                   ) : (
                     areas.map(area => (
                       <tr key={area.id}>
-                        <td>{area.id}</td>
-                        <td>{area.name}</td>
-                        <td className={area.isDanger ? 'text-danger fw-bold' : ''}>
+                        <td className="nowrap">{area.id}</td>
+                        <td className="nowrap">{area.name}</td>
+                        <td className={(area.isDanger ? 'text-danger fw-bold' : '') + ' nowrap'}>
                           {area.isDanger ? '⚠️ 위험' : '일반'}
                         </td>
-                        <td>
+                        <td className="nowrap">
                           <button className="btn-delete" onClick={() => handleDelete('areas', area.id)}>삭제</button>
                         </td>
                       </tr>
@@ -317,19 +317,32 @@ export default function ManagePage() {
                     <th>ID</th>
                     <th>작업구역</th>
                     <th>조치 내용</th>
+                    <th>QR 코드</th>
                     <th>작업</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lotos.length === 0 ? (
-                    <tr><td colSpan={4} className="empty-text">등록된 LOTO가 없습니다.</td></tr>
+                    <tr><td colSpan={5} className="empty-text">등록된 LOTO가 없습니다.</td></tr>
                   ) : (
                     lotos.map(loto => (
                       <tr key={loto.id}>
-                        <td>{loto.id}</td>
-                        <td>{loto.areaName || loto.areaId}</td>
-                        <td>{loto.text}</td>
-                        <td>
+                        <td className="nowrap">{loto.id}</td>
+                        <td className="nowrap">{loto.areaName || loto.areaId}</td>
+                        <td style={{ minWidth: '150px' }}>{loto.text}</td>
+                        <td className="nowrap">
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '4px' }}>
+                            <img 
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(loto.id)}`} 
+                              alt="QR" 
+                              width={80} 
+                              height={80} 
+                              style={{ border: '1px solid #ccc', padding: '2px', background: '#fff', borderRadius: '4px' }}
+                            />
+                            <span style={{ fontSize: '11px', color: '#666', fontWeight: 'bold' }}>{loto.id}</span>
+                          </div>
+                        </td>
+                        <td className="nowrap">
                           <button className="btn-delete" onClick={() => handleDelete('lotos', loto.id)}>삭제</button>
                         </td>
                       </tr>

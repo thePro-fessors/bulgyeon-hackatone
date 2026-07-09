@@ -127,10 +127,11 @@ th {
   padding: 0 1rem 0.5rem 1rem;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
 }
 
 td {
-  padding: 1.2rem 1rem;
+  padding: 1rem 0.8rem;
   background-color: rgba(255, 255, 255, 0.02);
 }
 
@@ -167,7 +168,7 @@ tbody tr:hover td {
 /* Manage Page Styles */
 .manage-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
   gap: 2rem;
 }
 
@@ -560,6 +561,10 @@ tbody tr:hover td {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+.nowrap {
+  white-space: nowrap;
 }
 
 

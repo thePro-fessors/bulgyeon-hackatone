@@ -18,11 +18,20 @@ import com.bulgyeong.safetyapp.ui.theme.FigmaYellow
 import com.bulgyeong.safetyapp.ui.theme.BulgyeongSafetyAppTheme
 import kotlinx.coroutines.delay
 
+import androidx.compose.ui.platform.LocalContext
+import com.bulgyeong.safetyapp.data.api.SessionManager
+
 @Composable
-fun SplashScreen(onTimeout: () -> Unit) {
+fun SplashScreen(onTimeout: (String) -> Unit) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         delay(1500)
-        onTimeout()
+        val target = when {
+            SessionManager.isWorking(context) -> "main"
+            SessionManager.isLoggedIn(context) -> "area_select"
+            else -> "login"
+        }
+        onTimeout(target)
     }
     
     Box(

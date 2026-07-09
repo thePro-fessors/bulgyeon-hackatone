@@ -33,7 +33,10 @@ import com.bulgyeong.safetyapp.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainTrackingScreen(onEmergency: () -> Unit) {
+fun MainTrackingScreen(
+    onEmergency: () -> Unit,
+    onWorkEnd: () -> Unit
+) {
     val context = LocalContext.current
     var hasPermissions by remember { mutableStateOf(false) }
     var permissionMessage by remember { mutableStateOf("") }
@@ -233,7 +236,12 @@ fun MainTrackingScreen(onEmergency: () -> Unit) {
             Spacer(modifier = Modifier.height(12.dp))
 
             Button(
-                onClick = { /* 작업 종료 로직 */ },
+                onClick = {
+                    val intent = Intent(context, LocationTrackingService::class.java)
+                    context.stopService(intent)
+                    com.bulgyeong.safetyapp.data.api.SessionManager.endWork(context)
+                    onWorkEnd()
+                },
                 modifier = Modifier
                     .width(251.dp)
                     .height(56.dp),
@@ -274,6 +282,6 @@ fun MainTrackingScreen(onEmergency: () -> Unit) {
 @Composable
 fun MainTrackingScreenPreview() {
     BulgyeongSafetyAppTheme {
-        MainTrackingScreen(onEmergency = {})
+        MainTrackingScreen(onEmergency = {}, onWorkEnd = {})
     }
 }

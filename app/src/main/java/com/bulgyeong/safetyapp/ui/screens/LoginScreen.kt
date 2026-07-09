@@ -97,7 +97,7 @@ fun LoginScreen(onLogin: (User) -> Unit) {
                         try {
                             val response = RetrofitClient.api.login(LoginRequest(employeeId))
                             if (response.success && response.user != null) {
-                                com.bulgyeong.safetyapp.data.api.SessionManager.currentUser = response.user
+                                com.bulgyeong.safetyapp.data.api.SessionManager.login(context, response.user)
                                 onLogin(response.user)
                             } else {
                                 Toast.makeText(context, "로그인 실패: ${response.message}", Toast.LENGTH_SHORT).show()

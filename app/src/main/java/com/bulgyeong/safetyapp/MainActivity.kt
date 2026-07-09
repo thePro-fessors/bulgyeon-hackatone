@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.bulgyeong.safetyapp.data.api.SessionManager.init(applicationContext)
         setContent {
             BulgyeongSafetyAppTheme {
                 Surface(
@@ -127,8 +128,8 @@ fun SafetyAppNavigation(
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
             SplashScreen(
-                onTimeout = {
-                    navController.navigate("login") {
+                onTimeout = { targetRoute ->
+                    navController.navigate(targetRoute) {
                         popUpTo("splash") { inclusive = true }
                     }
                 }
@@ -170,7 +171,12 @@ fun SafetyAppNavigation(
         }
         composable("main") {
             MainTrackingScreen(
-                onEmergency = onEmergencyTriggered
+                onEmergency = onEmergencyTriggered,
+                onWorkEnd = {
+                    navController.navigate("login") {
+                        popUpTo("area_select") { inclusive = true }
+                    }
+                }
             )
         }
         composable("emergency") {

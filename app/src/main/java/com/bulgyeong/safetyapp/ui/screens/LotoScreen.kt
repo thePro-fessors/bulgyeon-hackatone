@@ -27,6 +27,12 @@ import androidx.compose.ui.unit.sp
 import com.bulgyeong.safetyapp.data.api.Loto
 import com.bulgyeong.safetyapp.data.api.RetrofitClient
 import com.bulgyeong.safetyapp.ui.theme.*
+import androidx.compose.ui.graphics.Color
+
+import com.bulgyeong.safetyapp.ui.components.QrCodeScanner
+import android.os.Vibrator
+import android.os.VibrationEffect
+import android.content.Context
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +40,7 @@ fun LotoScreen(areaId: String, onNavigateToMain: () -> Unit) {
     var lotos by remember { mutableStateOf<List<Loto>>(emptyList()) }
     var checkedSet by remember { mutableStateOf(setOf<String>()) }
     var isLoading by remember { mutableStateOf(true) }
+    var activeLotoForScan by remember { mutableStateOf<Loto?>(null) }
 
     val context = LocalContext.current
 
@@ -54,87 +61,120 @@ fun LotoScreen(areaId: String, onNavigateToMain: () -> Unit) {
 
     val allChecked = lotos.isNotEmpty() && checkedSet.size == lotos.size
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("LOTO CHECK", fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = FigmaYellow,
-                    titleContentColor = FigmaBlack
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("LOTO CHECK", fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = FigmaYellow,
+                        titleContentColor = FigmaBlack
+                    )
                 )
-            )
-        },
-        bottomBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .background(FigmaYellow, RoundedCornerShape(1000.dp))
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .background(FigmaWhite, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Person, contentDescription = "Profile", tint = FigmaGray)
-                    }
-                    Text("홍길동", fontSize = 24.sp, color = FigmaBlack, fontWeight = FontWeight.Medium)
-                }
-            }
-        },
-        containerColor = FigmaWhite
-    ) { padding ->
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = FigmaBlack)
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 21.dp, vertical = 31.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(lotos) { loto ->
-                        val isChecked = checkedSet.contains(loto.id)
-                        LotoQrItem(
-                            text = loto.text,
-                            checked = isChecked,
-                            onScanClick = {
-                                // 임시로 바로 체크되게 처리 (실제로는 카메라/QR 연동 필요)
-                                checkedSet = checkedSet + loto.id
-                            }
-                        )
-                    }
-                }
-
-                Button(
-                    onClick = onNavigateToMain,
-                    enabled = allChecked,
+            },
+            bottomBar = {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp)
-                        .padding(horizontal = 40.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = FigmaBlack,
-                        disabledContainerColor = FigmaGray
-                    ),
-                    shape = RoundedCornerShape(1000.dp)
+                        .padding(16.dp)
+                        .background(FigmaYellow, RoundedCornerShape(1000.dp))
+                        .padding(horizontal = 20.dp, vertical = 8.dp)
                 ) {
-                    Text("안전 조치 완료", fontSize = 20.sp, color = FigmaWhite)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .background(FigmaWhite, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Person, contentDescription = "Profile", tint = FigmaGray)
+                        }
+                        Text("홍길동", fontSize = 24.sp, color = FigmaBlack, fontWeight = FontWeight.Medium)
+                    }
                 }
+            },
+            containerColor = FigmaWhite
+        ) { padding ->
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = FigmaBlack)
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(horizontal = 21.dp, vertical = 31.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(lotos) { loto ->
+                            val isChecked = checkedSet.contains(loto.id)
+                            LotoQrItem(
+                                text = loto.text,
+                                checked = isChecked,
+                                onScanClick = {
+                                    activeLotoForScan = loto
+                                }
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = onNavigateToMain,
+                        enabled = allChecked,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .padding(horizontal = 40.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = FigmaBlack,
+                            disabledContainerColor = FigmaGray
+                        ),
+                        shape = RoundedCornerShape(1000.dp)
+                    ) {
+                        Text("안전 조치 완료", fontSize = 20.sp, color = FigmaWhite)
+                    }
+                }
+            }
+        }
+
+        // QR 카메라 오버레이 뷰
+        if (activeLotoForScan != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
+                QrCodeScanner(
+                    onQrScanned = { scannedValue ->
+                        val targetLoto = activeLotoForScan
+                        if (targetLoto != null) {
+                            // scannedValue가 LOTO의 ID 혹은 조치내용 텍스트와 일치할 때 체크
+                            if (scannedValue == targetLoto.id || scannedValue == targetLoto.text) {
+                                checkedSet = checkedSet + targetLoto.id
+                                Toast.makeText(context, "✅ LOTO 인증 완료!", Toast.LENGTH_SHORT).show()
+                                
+                                // 진동 피드백
+                                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                                vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
+                            } else {
+                                Toast.makeText(context, "❌ 일치하지 않는 QR 코드입니다.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        activeLotoForScan = null
+                    },
+                    onClose = {
+                        activeLotoForScan = null
+                    }
+                )
             }
         }
     }
