@@ -1,8 +1,11 @@
 package com.bulgyeong.safetyapp.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -14,18 +17,41 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.bulgyeong.safetyapp.data.api.Area
+import com.bulgyeong.safetyapp.data.api.RetrofitClient
 import com.bulgyeong.safetyapp.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AreaSelectScreen(onAreaSelected: (String) -> Unit) {
+fun AreaSelectScreen(onAreaSelected: (Area) -> Unit) {
+    var areas by remember { mutableStateOf<List<Area>>(emptyList()) }
     var showDangerDialog by remember { mutableStateOf(false) }
-    var selectedDangerArea by remember { mutableStateOf("") }
+    var selectedDangerArea by remember { mutableStateOf<Area?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        try {
+            val response = RetrofitClient.api.getAreas()
+            if (response.success) {
+                areas = response.areas
+            } else {
+                Toast.makeText(context, "구역 목록을 불러오지 못했습니다.", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "네트워크 오류: ${e.message}", Toast.LENGTH_SHORT).show()
+        } finally {
+            isLoading = false
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -64,31 +90,38 @@ fun AreaSelectScreen(onAreaSelected: (String) -> Unit) {
         },
         containerColor = FigmaWhite
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 21.dp, vertical = 31.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            LocationItem(
-                name = "공학1관 공사현장",
-                isDanger = false,
-                onClick = { onAreaSelected("공학1관 공사현장") }
-            )
-            
-            LocationItem(
-                name = "공학3관 변전실",
-                isDanger = true,
-                onClick = {
-                    selectedDangerArea = "공학3관 변전실"
-                    showDangerDialog = true
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = FigmaBlack)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 21.dp, vertical = 31.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                items(areas) { area ->
+                    LocationItem(
+                        name = area.name,
+                        isDanger = area.isDanger == 1,
+                        onClick = {
+                            if (area.isDanger == 1) {
+                                selectedDangerArea = area
+                                showDangerDialog = true
+                            } else {
+                                com.bulgyeong.safetyapp.data.api.SessionManager.currentArea = area
+                                onAreaSelected(area)
+                            }
+                        }
+                    )
                 }
-            )
+            }
         }
     }
 
-    if (showDangerDialog) {
+    if (showDangerDialog && selectedDangerArea != null) {
         Dialog(onDismissRequest = { showDangerDialog = false }) {
             Box(
                 modifier = Modifier
@@ -119,7 +152,8 @@ fun AreaSelectScreen(onAreaSelected: (String) -> Unit) {
                     Button(
                         onClick = {
                             showDangerDialog = false
-                            onAreaSelected(selectedDangerArea)
+                            com.bulgyeong.safetyapp.data.api.SessionManager.currentArea = selectedDangerArea
+                            onAreaSelected(selectedDangerArea!!)
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -142,7 +176,7 @@ fun LocationItem(name: String, isDanger: Boolean, onClick: () -> Unit) {
             .fillMaxWidth()
             .height(71.dp)
             .background(
-                color = if (isDanger) FigmaDangerRed else FigmaYellow,
+                color = if (isDanger) AlertRed else FigmaYellow,
                 shape = RoundedCornerShape(1000.dp)
             )
             .clip(RoundedCornerShape(1000.dp))
@@ -165,13 +199,5 @@ fun LocationItem(name: String, isDanger: Boolean, onClick: () -> Unit) {
                 color = FigmaBlack
             )
         }
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview
-@Composable
-fun AreaSelectScreenPreview() {
-    BulgyeongSafetyAppTheme {
-        AreaSelectScreen(onAreaSelected = {})
     }
 }
