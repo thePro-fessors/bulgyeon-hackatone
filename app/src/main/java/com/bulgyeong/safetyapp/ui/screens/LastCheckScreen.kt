@@ -35,7 +35,10 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LastCheckScreen(onNavigateToMain: () -> Unit) {
+fun LastCheckScreen(
+    onNavigateToMain: () -> Unit,
+    onLogout: () -> Unit
+) {
     var checklists by remember { mutableStateOf<List<Checklist>>(emptyList()) }
     var checkedSet by remember { mutableStateOf(setOf<String>()) }
     var workTime by remember { mutableStateOf("") }
@@ -74,7 +77,7 @@ fun LastCheckScreen(onNavigateToMain: () -> Unit) {
                     val res = RetrofitClient.api.startWork(StartWorkRequest(employeeId, areaId, durationMinutes))
                     if (res.success) {
                         SessionManager.currentArea?.let { area ->
-                            SessionManager.startWork(context, area)
+                            SessionManager.startWork(context, area, durationMinutes)
                         }
                         onNavigateToMain()
                     } else {
@@ -105,6 +108,10 @@ fun LastCheckScreen(onNavigateToMain: () -> Unit) {
                     .fillMaxWidth()
                     .padding(16.dp)
                     .background(FigmaYellow, RoundedCornerShape(1000.dp))
+                    .clickable {
+                        com.bulgyeong.safetyapp.data.api.SessionManager.endWork(context)
+                        onLogout()
+                    }
                     .padding(horizontal = 20.dp, vertical = 8.dp)
             ) {
                 Row(

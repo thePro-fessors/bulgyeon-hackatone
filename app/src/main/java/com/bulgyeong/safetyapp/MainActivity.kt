@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
     private var currentRoute: String? = "splash"
 
     // 비상 신호를 전달하기 위한 간단한 SharedFlow입니다.
-    private val _emergencySignal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val _emergencySignal = MutableSharedFlow<EmergencyType>(extraBufferCapacity = 1)
     private val emergencySignal = _emergencySignal.asSharedFlow()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
                     SafetyAppNavigation(
                         emergencySignal = emergencySignal,
                         onRouteChanged = { route -> currentRoute = route },
-                        onEmergencyTriggered = { triggerEmergencyLogic() }
+                        onEmergencyTriggered = { type -> triggerEmergencyLogic(type) }
                     )
                 }
             }
@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
                 volumeDownPressJob = CoroutineScope(Dispatchers.Main).launch {
                     Toast.makeText(this@MainActivity, "⏳ SOS 3초 카운트다운 시작...", Toast.LENGTH_SHORT).show()
                     delay(3000)
-                    triggerEmergencyLogic()
+                    triggerEmergencyLogic(EmergencyType.SOS)
                     volumeDownPressJob = null
                 }
             }
@@ -84,7 +84,7 @@ class MainActivity : ComponentActivity() {
         return super.onKeyUp(keyCode, event)
     }
 
-    private fun triggerEmergencyLogic() {
+    private fun triggerEmergencyLogic(type: EmergencyType) {
         val isNetworkAvailable = checkNetworkStatus()
 
         if (isNetworkAvailable) {
@@ -93,7 +93,7 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this@MainActivity, "🚨 통신 두절: BLE 가동!", Toast.LENGTH_SHORT).show()
         }
 
-        _emergencySignal.tryEmit(Unit)
+        _emergencySignal.tryEmit(type)
     }
 
     private fun checkNetworkStatus(): Boolean {
@@ -103,9 +103,9 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SafetyAppNavigation(
-    emergencySignal: SharedFlow<Unit>,
+    emergencySignal: SharedFlow<EmergencyType>,
     onRouteChanged: (String?) -> Unit,
-    onEmergencyTriggered: () -> Unit
+    onEmergencyTriggered: (EmergencyType) -> Unit
 ) {
     val navController = rememberNavController()
 
@@ -120,8 +120,8 @@ fun SafetyAppNavigation(
     }
 
     LaunchedEffect(emergencySignal) {
-        emergencySignal.collect {
-            navController.navigate("emergency")
+        emergencySignal.collect { type ->
+            navController.navigate("emergency/${type.name}")
         }
     }
 
@@ -148,6 +148,11 @@ fun SafetyAppNavigation(
             AreaSelectScreen(
                 onAreaSelected = { area ->
                     navController.navigate("loto/${area.id}")
+                },
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo(0)
+                    }
                 }
             )
         }
@@ -157,6 +162,11 @@ fun SafetyAppNavigation(
                 areaId = areaId,
                 onNavigateToMain = {
                     navController.navigate("last_check")
+                },
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo(0)
+                    }
                 }
             )
         }
@@ -166,21 +176,33 @@ fun SafetyAppNavigation(
                     navController.navigate("main") {
                         popUpTo("area_select") { inclusive = true }
                     }
+                },
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo(0)
+                    }
                 }
             )
         }
         composable("main") {
             MainTrackingScreen(
-                onEmergency = onEmergencyTriggered,
+                onEmergency = { type -> onEmergencyTriggered(type) },
                 onWorkEnd = {
                     navController.navigate("login") {
-                        popUpTo("area_select") { inclusive = true }
+                        popUpTo(0)
                     }
                 }
             )
         }
-        composable("emergency") {
+        composable("emergency/{type}") { backStackEntry ->
+            val typeStr = backStackEntry.arguments?.getString("type") ?: "SOS"
+            val type = try {
+                EmergencyType.valueOf(typeStr)
+            } catch (e: Exception) {
+                EmergencyType.SOS
+            }
             EmergencyScreen(
+                type = type,
                 onCancel = {
                     navController.popBackStack()
                 }

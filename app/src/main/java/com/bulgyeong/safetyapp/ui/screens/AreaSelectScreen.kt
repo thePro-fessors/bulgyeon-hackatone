@@ -30,7 +30,10 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AreaSelectScreen(onAreaSelected: (Area) -> Unit) {
+fun AreaSelectScreen(
+    onAreaSelected: (Area) -> Unit,
+    onLogout: () -> Unit
+) {
     var areas by remember { mutableStateOf<List<Area>>(emptyList()) }
     var showDangerDialog by remember { mutableStateOf(false) }
     var selectedDangerArea by remember { mutableStateOf<Area?>(null) }
@@ -69,6 +72,10 @@ fun AreaSelectScreen(onAreaSelected: (Area) -> Unit) {
                     .fillMaxWidth()
                     .padding(16.dp)
                     .background(FigmaYellow, RoundedCornerShape(1000.dp))
+                    .clickable {
+                        com.bulgyeong.safetyapp.data.api.SessionManager.endWork(context)
+                        onLogout()
+                    }
                     .padding(horizontal = 20.dp, vertical = 8.dp)
             ) {
                 Row(

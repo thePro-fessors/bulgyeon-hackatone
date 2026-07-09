@@ -23,6 +23,8 @@ data class ChecklistResponse(val success: Boolean, val checklists: List<Checklis
 data class Checklist(val id: String, val text: String)
 
 data class StartWorkRequest(val employeeId: String, val areaId: String, val durationMinutes: Int)
+data class EndWorkRequest(val employeeId: String)
+data class ExtendWorkRequest(val employeeId: String, val extendMinutes: Int)
 data class BaseResponse(val success: Boolean, val message: String?)
 
 data class EmergencyRequest(val employeeId: String, val type: String)
@@ -42,6 +44,12 @@ interface SafetyApiService {
 
     @POST("/api/work/start")
     suspend fun startWork(@Body request: StartWorkRequest): BaseResponse
+
+    @POST("/api/work/end")
+    suspend fun endWork(@Body request: EndWorkRequest): BaseResponse
+
+    @POST("/api/work/extend")
+    suspend fun extendWork(@Body request: ExtendWorkRequest): BaseResponse
 
     @POST("/api/emergency")
     suspend fun reportEmergency(@Body request: EmergencyRequest): BaseResponse
@@ -68,6 +76,8 @@ object SessionManager {
     private const val KEY_IS_WORKING = "is_working"
     private const val KEY_AREA_ID = "area_id"
     private const val KEY_AREA_NAME = "area_name"
+    private const val KEY_START_TIME_MILLIS = "start_time_millis"
+    private const val KEY_DURATION_MINUTES = "duration_minutes"
 
     var currentUser: User? = null
     var currentArea: Area? = null
@@ -95,13 +105,33 @@ object SessionManager {
             .apply()
     }
 
-    fun startWork(context: Context, area: Area) {
+    fun startWork(context: Context, area: Area, durationMinutes: Int) {
         currentArea = area
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_IS_WORKING, true)
             .putString(KEY_AREA_ID, area.id)
             .putString(KEY_AREA_NAME, area.name)
+            .putLong(KEY_START_TIME_MILLIS, System.currentTimeMillis())
+            .putInt(KEY_DURATION_MINUTES, durationMinutes)
             .apply()
+    }
+
+    fun addDuration(context: Context, minutes: Int) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val currentDuration = prefs.getInt(KEY_DURATION_MINUTES, 0)
+        prefs.edit()
+            .putInt(KEY_DURATION_MINUTES, currentDuration + minutes)
+            .apply()
+    }
+
+    fun getStartTimeMillis(context: Context): Long {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getLong(KEY_START_TIME_MILLIS, 0L)
+    }
+
+    fun getDurationMinutes(context: Context): Int {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getInt(KEY_DURATION_MINUTES, 0)
     }
 
     fun endWork(context: Context) {

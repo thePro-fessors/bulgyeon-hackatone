@@ -36,7 +36,11 @@ import android.content.Context
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LotoScreen(areaId: String, onNavigateToMain: () -> Unit) {
+fun LotoScreen(
+    areaId: String,
+    onNavigateToMain: () -> Unit,
+    onLogout: () -> Unit
+) {
     var lotos by remember { mutableStateOf<List<Loto>>(emptyList()) }
     var checkedSet by remember { mutableStateOf(setOf<String>()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -78,6 +82,10 @@ fun LotoScreen(areaId: String, onNavigateToMain: () -> Unit) {
                         .fillMaxWidth()
                         .padding(16.dp)
                         .background(FigmaYellow, RoundedCornerShape(1000.dp))
+                        .clickable {
+                            com.bulgyeong.safetyapp.data.api.SessionManager.endWork(context)
+                            onLogout()
+                        }
                         .padding(horizontal = 20.dp, vertical = 8.dp)
                 ) {
                     Row(
