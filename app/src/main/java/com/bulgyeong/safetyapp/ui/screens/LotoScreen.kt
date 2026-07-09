@@ -93,7 +93,7 @@ fun LotoScreen(areaId: String, onNavigateToMain: () -> Unit) {
                         ) {
                             Icon(Icons.Default.Person, contentDescription = "Profile", tint = FigmaGray)
                         }
-                        Text("홍길동", fontSize = 24.sp, color = FigmaBlack, fontWeight = FontWeight.Medium)
+                        Text(com.bulgyeong.safetyapp.data.api.SessionManager.currentUser?.name ?: "홍길동", fontSize = 24.sp, color = FigmaBlack, fontWeight = FontWeight.Medium)
                     }
                 }
             },
