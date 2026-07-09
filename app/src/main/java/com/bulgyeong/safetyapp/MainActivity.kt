@@ -64,6 +64,13 @@ fun SafetyAppNavigation() {
         composable("loto") {
             LotoScreen(
                 onNavigateToMain = {
+                    navController.navigate("last_check")
+                }
+            )
+        }
+        composable("last_check") {
+            LastCheckScreen(
+                onNavigateToMain = {
                     navController.navigate("main") {
                         popUpTo("area_select") { inclusive = true }
                     }
