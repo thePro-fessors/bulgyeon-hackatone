@@ -48,7 +48,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     SafetyAppNavigation(
                         emergencySignal = emergencySignal,
-                        onRouteChanged = { route -> currentRoute = route }
+                        onRouteChanged = { route -> currentRoute = route },
+                        onEmergencyTriggered = { triggerEmergencyLogic() }
                     )
                 }
             }
@@ -102,7 +103,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SafetyAppNavigation(
     emergencySignal: SharedFlow<Unit>,
-    onRouteChanged: (String?) -> Unit
+    onRouteChanged: (String?) -> Unit,
+    onEmergencyTriggered: () -> Unit
 ) {
     val navController = rememberNavController()
 
@@ -168,9 +170,7 @@ fun SafetyAppNavigation(
         }
         composable("main") {
             MainTrackingScreen(
-                onEmergency = {
-                    navController.navigate("emergency")
-                }
+                onEmergency = onEmergencyTriggered
             )
         }
         composable("emergency") {
