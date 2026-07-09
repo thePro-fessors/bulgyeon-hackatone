@@ -298,6 +298,21 @@ tbody tr:hover td {
   }
 }
 
+/* Leaflet Map Styles */
+#realtime-map {
+  height: 400px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 10;
+  width: 100%;
+}
+
+.leaflet-container {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  border-radius: 12px;
+}
+
 /* Navigation Menu */
 .layout-wrapper {
   min-height: 100vh;

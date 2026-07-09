@@ -14,6 +14,11 @@ import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import com.google.android.gms.location.*
 
 class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listener, BleUwbScanner.Callback, PdrNavigator.PdrCallback {
@@ -61,6 +66,42 @@ class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listene
             .setMinUpdateDistanceMeters(5f)
             .build()
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+
+        // 최초 기동 시 즉시 위치 정보 1회 리포트 (기본 가상 좌표 또는 Last Known Location)
+        val employeeId = com.bulgyeong.safetyapp.data.api.SessionManager.currentUser?.employeeId
+        if (employeeId != null) {
+            fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                val lat = loc?.latitude ?: 35.1595
+                val lon = loc?.longitude ?: 129.0430
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        com.bulgyeong.safetyapp.data.api.RetrofitClient.api.reportLocation(
+                            com.bulgyeong.safetyapp.data.api.LocationReportRequest(
+                                employeeId,
+                                lat,
+                                lon
+                            )
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }.addOnFailureListener {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        com.bulgyeong.safetyapp.data.api.RetrofitClient.api.reportLocation(
+                            com.bulgyeong.safetyapp.data.api.LocationReportRequest(
+                                employeeId,
+                                35.1595,
+                                129.0430
+                            )
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
     }
 
     private fun stopLocationUpdates() {
@@ -74,6 +115,26 @@ class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listene
                 lastGpsTimestamp = System.currentTimeMillis()
                 stateMachine.onGpsLocation(location.accuracy)
                 repository.appendTrackingRecord(location.toTrackingRecord("gps"))
+                updateLocationText("🌐 GPS 추적 중\n위도: ${String.format("%.5f", location.latitude)}\n경도: ${String.format("%.5f", location.longitude)}\n정확도: ${location.accuracy}m")
+
+                // 실시간 GPS 서버 전송 연동
+                val employeeId = com.bulgyeong.safetyapp.data.api.SessionManager.currentUser?.employeeId
+                if (employeeId != null) {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        try {
+                            com.bulgyeong.safetyapp.data.api.RetrofitClient.api.reportLocation(
+                                com.bulgyeong.safetyapp.data.api.LocationReportRequest(
+                                    employeeId,
+                                    location.latitude,
+                                    location.longitude
+                                )
+                            )
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                }
+
                 when (stateMachineState) {
                     TrackingState.PDR_ACTIVE, TrackingState.BLE_UWB_ACTIVE -> stopFallbackModes()
                     else -> { }
@@ -149,6 +210,25 @@ class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listene
     override fun onAnchorDetected(anchorLat: Double, anchorLon: Double) {
         pdrNavigator.applyAnchorCorrection(anchorLat, anchorLon)
         val correctedPosition = pdrNavigator.getAbsoluteGeoPosition()
+
+        // 앵커 절대 보정 좌표 서버 보고 연동
+        val employeeId = com.bulgyeong.safetyapp.data.api.SessionManager.currentUser?.employeeId
+        if (employeeId != null) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    com.bulgyeong.safetyapp.data.api.RetrofitClient.api.reportLocation(
+                        com.bulgyeong.safetyapp.data.api.LocationReportRequest(
+                            employeeId,
+                            correctedPosition.first,
+                            correctedPosition.second
+                        )
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+
         repository.appendTrackingRecord(
             TrackingRecord(
                 timestamp = System.currentTimeMillis(),
@@ -169,8 +249,29 @@ class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listene
             "{\"type\":\"ble_scan\",\"timestamp\":${System.currentTimeMillis()},\"readings\":${readings.map { "{\\\"macAddress\\\":\\\"${it.macAddress}\\\",\\\"rssi\\\":${it.rssi},\\\"distance\\\":${it.estimatedDistanceMeters}}" }}}"
         )
         stateMachine.onBleReadings(readings)
+        updateLocationText("📶 BLE 스캔 중\n감지된 비콘 수: ${readings.size}개")
         val estimated = bleScanner.estimateLocationFromReadings(readings)
         estimated?.let { (lat, lon) ->
+            updateLocationText("📶 BLE 신호 기반 위치 추정 완료\n위도: ${String.format("%.5f", lat)}\n경도: ${String.format("%.5f", lon)}")
+
+            // BLE 기반 추정 위치 서버 보고 연동
+            val employeeId = com.bulgyeong.safetyapp.data.api.SessionManager.currentUser?.employeeId
+            if (employeeId != null) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        com.bulgyeong.safetyapp.data.api.RetrofitClient.api.reportLocation(
+                            com.bulgyeong.safetyapp.data.api.LocationReportRequest(
+                                employeeId,
+                                lat,
+                                lon
+                            )
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+
             repository.appendTrackingRecord(
                 TrackingRecord(
                     timestamp = System.currentTimeMillis(),
@@ -201,6 +302,7 @@ class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listene
                 extra = "PDR 상대 경로, heading=${position.headingDegrees}, steps=${position.stepCount}"
             )
         )
+        updateLocationText("🚶 PDR 이동 측정 중\n상대 X: ${String.format("%.1f", position.xMeters)}m\nY: ${String.format("%.1f", position.yMeters)}m\n걸음 수: ${position.stepCount}보")
         stateMachine.onPdrMotion()
     }
 
@@ -211,5 +313,12 @@ class LocationTrackingService : LifecycleService(), TrackingStateMachine.Listene
     companion object {
         private const val NOTIFICATION_ID = 9012
         private const val CHANNEL_ID = "location_tracking_channel"
+
+        private val _lastLocationText = MutableStateFlow("📡 추적 시작 대기 중...")
+        val lastLocationText = _lastLocationText.asStateFlow()
+
+        fun updateLocationText(text: String) {
+            _lastLocationText.value = text
+        }
     }
 }

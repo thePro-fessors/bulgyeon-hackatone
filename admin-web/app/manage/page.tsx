@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
+import 'leaflet/dist/leaflet.css';
 
 type Area = { id: string; name: string; isDanger: number };
 type Loto = { id: string; areaId: string; text: string; areaName?: string };
@@ -9,6 +11,12 @@ type User = { employeeId: string; name: string };
 
 type ModalType = 'area' | 'loto' | 'checklist' | 'user' | null;
 type TabType = 'single' | 'batch' | 'csv';
+
+// Map component (client only)
+const MapComponent = dynamic(() => import('@/app/components/MapComponent'), {
+  ssr: false,
+  loading: () => <div style={{ height: '400px', backgroundColor: 'rgba(0,0,0,0.4)' }}>지도 로딩 중...</div>
+});
 
 export default function ManagePage() {
   // Data lists
@@ -48,6 +56,35 @@ export default function ManagePage() {
   const showMessage = (text: string, isError = false) => {
     setMessage({ text, isError });
     setTimeout(() => setMessage({ text: '', isError: false }), 4000);
+  };
+
+  // Test location reporting
+  const testReportLocation = async () => {
+    try {
+      const employees = users || [];
+      if (employees.length === 0) {
+        showMessage('먼저 사원을 등록해주세요.', true);
+        return;
+      }
+
+      // Report random locations for all employees
+      const promises = employees.map(emp =>
+        fetch('/api/location/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            employeeId: emp.employeeId,
+            latitude: 35.1595 + (Math.random() - 0.5) * 0.1,
+            longitude: 129.0430 + (Math.random() - 0.5) * 0.1
+          })
+        })
+      );
+
+      await Promise.all(promises);
+      showMessage(`${employees.length}명의 위치 정보가 등록되었습니다.`);
+    } catch (err: any) {
+      showMessage('위치 등록에 실패했습니다.', true);
+    }
   };
 
   const fetchData = async () => {
@@ -265,7 +302,20 @@ export default function ManagePage() {
       {loading ? (
         <div className="empty-text">데이터를 불러오는 중입니다...</div>
       ) : (
-        <main className="manage-grid">
+        <>
+          {/* Realtime GPS Map Card */}
+          <section className="card" style={{ marginBottom: '2rem', minHeight: '480px' }}>
+            <div className="card-header" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2>🗺️ 실시간 작업자 GPS 위치 관제</h2>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>* 5초마다 자동 갱신됩니다.</span>
+              </div>
+              <button className="btn-add" onClick={testReportLocation} style={{ whiteSpace: 'nowrap', marginLeft: '1rem' }}>테스트 위치 (+)</button>
+            </div>
+            <MapComponent />
+          </section>
+
+          <main className="manage-grid">
           {/* Areas Table */}
           <section className="card">
             <div className="card-header">
@@ -421,7 +471,8 @@ export default function ManagePage() {
             </div>
           </section>
         </main>
-      )}
+      </>
+    )}
 
       {/* Popups / Modals */}
       {activeModal && (

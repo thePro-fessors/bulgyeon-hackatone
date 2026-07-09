@@ -3,9 +3,7 @@ package com.bulgyeong.safetyapp.ui.screens
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -50,7 +48,7 @@ import kotlinx.coroutines.Dispatchers
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainTrackingScreen(
-    onEmergency: (com.bulgyeong.safetyapp.ui.screens.EmergencyType) -> Unit,
+    onEmergency: (EmergencyType) -> Unit,
     onWorkEnd: () -> Unit
 ) {
     val context = LocalContext.current
@@ -96,7 +94,7 @@ fun MainTrackingScreen(
             }
             // 1분간 터치/움직임 미감지 시 -> 자동 비상 모드 가동
             showDeadManDialog = false
-            onEmergency(com.bulgyeong.safetyapp.ui.screens.EmergencyType.DEADMAN)
+            onEmergency(EmergencyType.DEADMAN)
         }
     }
 
@@ -320,20 +318,7 @@ fun MainTrackingScreen(
                     }
                 }
 
-                // 위치 추적 및 센서 정보 카드
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(186.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(FigmaBlack),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("위치 추적 및 센서 정보", fontSize = 24.sp, color = FigmaWhite, textAlign = TextAlign.Center)
-                }
-                
-                Spacer(modifier = Modifier.weight(1f))
-
+                // 위치 추적 시작
                 Button(
                     onClick = {
                         when {
@@ -348,6 +333,7 @@ fun MainTrackingScreen(
                             else -> {
                                 hasPermissions = true
                                 startLocationService()
+                                Toast.makeText(context, "위치추적 시작됨", Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
@@ -409,7 +395,7 @@ fun MainTrackingScreen(
                         .height(150.dp)
                         .clip(RoundedCornerShape(20.dp))
                         .background(AlertRed)
-                        .clickable { onEmergency(com.bulgyeong.safetyapp.ui.screens.EmergencyType.SOS) },
+                        .clickable { onEmergency(EmergencyType.SOS) },
                     contentAlignment = Alignment.Center
                 ) {
                     Column(

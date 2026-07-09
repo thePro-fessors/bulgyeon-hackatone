@@ -26,7 +26,7 @@ data class StartWorkRequest(val employeeId: String, val areaId: String, val dura
 data class EndWorkRequest(val employeeId: String)
 data class ExtendWorkRequest(val employeeId: String, val extendMinutes: Int)
 data class BaseResponse(val success: Boolean, val message: String?)
-
+data class LocationReportRequest(val employeeId: String, val latitude: Double, val longitude: Double)
 data class EmergencyRequest(val employeeId: String, val type: String)
 
 interface SafetyApiService {
@@ -53,6 +53,9 @@ interface SafetyApiService {
 
     @POST("/api/emergency")
     suspend fun reportEmergency(@Body request: EmergencyRequest): BaseResponse
+
+    @POST("/api/location/report")
+    suspend fun reportLocation(@Body request: LocationReportRequest): BaseResponse
 }
 
 object RetrofitClient {
