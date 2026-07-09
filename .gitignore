@@ -46,3 +46,6 @@ bin/
 
 # Lock files
 *.lock
+
+# DB files
+*.db

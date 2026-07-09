@@ -8,21 +8,38 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.compose.currentBackStackEntryAsState
-import com.bulgyeong.safetyapp.ui.screens.*
+import com.bulgyeong.safetyapp.ui.screens.AreaSelectScreen
+import com.bulgyeong.safetyapp.ui.screens.DeadManScreen
+import com.bulgyeong.safetyapp.ui.screens.EmergencyScreen
+import com.bulgyeong.safetyapp.ui.screens.LastCheckScreen
+import com.bulgyeong.safetyapp.ui.screens.LoginScreen
+import com.bulgyeong.safetyapp.ui.screens.LotoScreen
+import com.bulgyeong.safetyapp.ui.screens.MainTrackingScreen
+import com.bulgyeong.safetyapp.ui.screens.SplashScreen
 import com.bulgyeong.safetyapp.ui.theme.BulgyeongSafetyAppTheme
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private var volumeDownPressJob: Job? = null
+    private var currentRoute: String? = "splash"
     private val _emergencySignal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    
+    private val emergencySignal = _emergencySignal.asSharedFlow()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -31,15 +48,18 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    SafetyAppNavigation()
+                    SafetyAppNavigation(
+                        emergencySignal = emergencySignal,
+                        onRouteChanged = { route -> currentRoute = route },
+                        onEmergencyTriggered = { triggerEmergencyLogic() }
+                    )
                 }
             }
         }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        // 현재 탑 레벨에서 route를 알기 어렵지만, 간단하게 구현
-        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN && currentRoute == "main") {
             if (event?.repeatCount == 0) {
                 volumeDownPressJob = CoroutineScope(Dispatchers.Main).launch {
                     Toast.makeText(this@MainActivity, "⏳ SOS 3초 카운트다운 시작...", Toast.LENGTH_SHORT).show()
@@ -54,7 +74,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN && currentRoute == "main") {
             if (volumeDownPressJob?.isActive == true) {
                 Toast.makeText(this@MainActivity, "❌ SOS 취소됨", Toast.LENGTH_SHORT).show()
                 volumeDownPressJob?.cancel()
@@ -77,15 +97,33 @@ class MainActivity : ComponentActivity() {
         _emergencySignal.tryEmit(Unit)
     }
 
-    private fun checkNetworkStatus(): Boolean {
-        return false
-    }
+    private fun checkNetworkStatus(): Boolean = false
 }
 
 @Composable
-fun SafetyAppNavigation() {
+fun SafetyAppNavigation(
+    emergencySignal: SharedFlow<Unit>,
+    onRouteChanged: (String?) -> Unit,
+    onEmergencyTriggered: () -> Unit
+) {
     val navController = rememberNavController()
-    
+
+    DisposableEffect(navController) {
+        val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            onRouteChanged(destination.route)
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose {
+            navController.removeOnDestinationChangedListener(listener)
+        }
+    }
+
+    LaunchedEffect(emergencySignal) {
+        emergencySignal.collect {
+            navController.navigate("emergency")
+        }
+    }
+
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
             SplashScreen(
@@ -107,8 +145,8 @@ fun SafetyAppNavigation() {
         }
         composable("area_select") {
             AreaSelectScreen(
-                onAreaSelected = { areaId ->
-                    navController.navigate("loto/$areaId")
+                onAreaSelected = { area ->
+                    navController.navigate("loto/${area.id}")
                 }
             )
         }
@@ -137,9 +175,7 @@ fun SafetyAppNavigation() {
             val duration = backStackEntry.arguments?.getString("duration")?.toIntOrNull() ?: 60
             MainTrackingScreen(
                 initialMinutes = duration,
-                onEmergency = {
-                    navController.navigate("emergency")
-                }
+                onEmergency = onEmergencyTriggered
             )
         }
 
