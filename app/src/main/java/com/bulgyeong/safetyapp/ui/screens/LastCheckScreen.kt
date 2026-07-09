@@ -83,7 +83,7 @@ fun LastCheckScreen(onNavigateToMain: () -> Unit) {
                 TextField(
                     value = workTime,
                     onValueChange = { workTime = it },
-                    placeholder = { Text("작업 시간을 분단위로 입력하세요", color = FigmaGray) },
+                    placeholder = { Text("작업 시간을 분단위로 입력하세요", color = FigmaGray, fontSize = 15.sp) },
                     leadingIcon = { Icon(Icons.Default.AccessTime, contentDescription = null, tint = FigmaBlack) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -97,6 +97,34 @@ fun LastCheckScreen(onNavigateToMain: () -> Unit) {
                         unfocusedIndicatorColor = Color.Transparent
                     )
                 )
+                
+                // Time adjustment buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TimeButton(text = "+ 30분", modifier = Modifier.weight(1f)) {
+                        val current = workTime.toIntOrNull() ?: 0
+                        workTime = (current + 30).toString()
+                    }
+                    TimeButton(text = "- 30분", modifier = Modifier.weight(1f)) {
+                        val current = workTime.toIntOrNull() ?: 0
+                        workTime = maxOf(0, current - 30).toString()
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TimeButton(text = "+ 1시간", modifier = Modifier.weight(1f)) {
+                        val current = workTime.toIntOrNull() ?: 0
+                        workTime = (current + 60).toString()
+                    }
+                    TimeButton(text = "- 1시간", modifier = Modifier.weight(1f)) {
+                        val current = workTime.toIntOrNull() ?: 0
+                        workTime = maxOf(0, current - 60).toString()
+                    }
+                }
             }
 
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -135,6 +163,20 @@ fun LastCheckScreen(onNavigateToMain: () -> Unit) {
 }
 
 @Composable
+fun TimeButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Box(
+        modifier = modifier
+            .height(46.dp)
+            .background(FigmaBlack, RoundedCornerShape(1000.dp))
+            .clip(RoundedCornerShape(1000.dp))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = text, color = FigmaWhite, fontSize = 20.sp)
+    }
+}
+
+@Composable
 fun LastCheckItem(text: String, checked: Boolean, onToggle: () -> Unit) {
     Row(
         modifier = Modifier
@@ -142,6 +184,8 @@ fun LastCheckItem(text: String, checked: Boolean, onToggle: () -> Unit) {
             .height(71.dp)
             .background(FigmaWhite, RoundedCornerShape(1000.dp))
             .border(BorderStroke(1.dp, FigmaBlack), RoundedCornerShape(1000.dp))
+            .clip(RoundedCornerShape(1000.dp))
+            .clickable { onToggle() }
             .padding(horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -151,9 +195,7 @@ fun LastCheckItem(text: String, checked: Boolean, onToggle: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(50.dp)
-                .background(if (checked) FigmaGreen else FigmaDangerRed, CircleShape)
-                .clip(CircleShape)
-                .clickable { onToggle() },
+                .background(if (checked) FigmaGreen else FigmaDangerRed, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(

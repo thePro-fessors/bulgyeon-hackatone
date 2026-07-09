@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bulgyeong.safetyapp.ui.theme.*
@@ -24,7 +25,7 @@ fun MainTrackingScreen(onEmergency: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Safety Site", fontWeight = FontWeight.Bold) },
+                title = { Text("Safety Site", fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = FigmaYellow,
                     titleContentColor = FigmaBlack
@@ -62,50 +63,77 @@ fun MainTrackingScreen(onEmergency: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(21.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 데드맨 스위치 타이머
-            Card(
-                colors = CardDefaults.cardColors(containerColor = FigmaLightGray),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+            // 남은 작업 시간 카드
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(186.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(FigmaBlack),
+                contentAlignment = Alignment.Center
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text("안전 타이머", color = FigmaGray)
-                    Text(
-                        text = "59:42",
-                        fontSize = 64.sp,
-                        fontWeight = FontWeight.Black,
-                        color = FigmaBlack,
-                        letterSpacing = 4.sp
-                    )
-                    Text("PDR 추적 중", color = NeonGreen)
+                    Text("남은 작업 시간", fontSize = 24.sp, color = FigmaWhite)
+                    Text("NN : NN : NN", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = FigmaWhite)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("시작시간 : NN:NN:NN", fontSize = 15.sp, color = FigmaWhite)
+                        Text("종료시간 : NN:NN:NN", fontSize = 15.sp, color = FigmaWhite)
+                    }
                 }
             }
 
+            // 위치 추적 및 센서 정보 카드
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(186.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(FigmaBlack),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("위치 추적 및 센서 정보", fontSize = 24.sp, color = FigmaWhite, textAlign = TextAlign.Center)
+            }
+            
             Spacer(modifier = Modifier.weight(1f))
+
+            // 작업 종료 버튼
+            Button(
+                onClick = { /* 작업 종료 로직 */ },
+                modifier = Modifier
+                    .width(251.dp)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = FigmaBlack),
+                shape = RoundedCornerShape(1000.dp)
+            ) {
+                Text("작업 종료", fontSize = 20.sp, color = FigmaWhite)
+            }
 
             // SOS 버튼
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp)
-                    .clip(RoundedCornerShape(32.dp))
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(20.dp))
                     .background(AlertRed)
                     .clickable { onEmergency() },
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Icon(Icons.Default.Warning, contentDescription = "SOS", tint = FigmaWhite, modifier = Modifier.size(64.dp))
                     Text(
-                        "긴급 구조 요청 (SOS)",
+                        "긴급구조요청 (SOS)",
                         color = FigmaWhite,
-                        fontSize = 28.sp,
+                        fontSize = 32.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }

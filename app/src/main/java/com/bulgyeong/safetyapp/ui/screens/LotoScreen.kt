@@ -136,6 +136,8 @@ fun LotoQrItem(text: String, checked: Boolean, onScanClick: () -> Unit) {
             .height(72.dp)
             .background(if (checked) FigmaGreen else FigmaWhite, RoundedCornerShape(1000.dp))
             .border(BorderStroke(2.dp, FigmaBlack), RoundedCornerShape(1000.dp))
+            .clip(RoundedCornerShape(1000.dp))
+            .clickable(enabled = !checked) { onScanClick() }
             .padding(horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -150,8 +152,7 @@ fun LotoQrItem(text: String, checked: Boolean, onScanClick: () -> Unit) {
             modifier = Modifier
                 .size(48.dp)
                 .background(FigmaBlack, CircleShape)
-                .clip(CircleShape)
-                .clickable(enabled = !checked) { onScanClick() },
+                .clip(CircleShape),
             contentAlignment = Alignment.Center
         ) {
             if (checked) {
