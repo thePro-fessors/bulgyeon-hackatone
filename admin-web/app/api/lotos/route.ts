@@ -11,5 +11,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, lotos });
   }
   
-  return NextResponse.json({ success: false, message: 'Missing areaId' }, { status: 400 });
+  const lotos = await db.all('SELECT l.*, a.name as areaName FROM Lotos l JOIN Areas a ON l.areaId = a.id');
+  return NextResponse.json({ success: true, lotos });
 }
