@@ -46,7 +46,7 @@ fun SafetyAppNavigation() {
         }
         composable("login") {
             LoginScreen(
-                onLogin = {
+                onLogin = { user ->
                     navController.navigate("area_select") {
                         popUpTo("login") { inclusive = true }
                     }
@@ -56,13 +56,14 @@ fun SafetyAppNavigation() {
         composable("area_select") {
             AreaSelectScreen(
                 onAreaSelected = { area ->
-                    // area 정보를 넘길 수 있지만 디자인만 구현하므로 넘어감
-                    navController.navigate("loto")
+                    navController.navigate("loto/${area.id}")
                 }
             )
         }
-        composable("loto") {
+        composable("loto/{areaId}") { backStackEntry ->
+            val areaId = backStackEntry.arguments?.getString("areaId") ?: ""
             LotoScreen(
+                areaId = areaId,
                 onNavigateToMain = {
                     navController.navigate("last_check")
                 }

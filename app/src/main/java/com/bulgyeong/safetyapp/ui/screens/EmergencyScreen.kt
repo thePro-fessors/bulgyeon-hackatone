@@ -30,6 +30,16 @@ enum class EmergencyType(val message: String) {
 
 @Composable
 fun EmergencyScreen(type: EmergencyType = EmergencyType.SOS, onCancel: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(type) {
+        val employeeId = com.bulgyeong.safetyapp.data.api.SessionManager.currentUser?.employeeId ?: return@LaunchedEffect
+        try {
+            com.bulgyeong.safetyapp.data.api.RetrofitClient.api.reportEmergency(com.bulgyeong.safetyapp.data.api.EmergencyRequest(employeeId, type.name))
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(context, "비상 보고 실패: \${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "siren")
     val bgColor by infiniteTransition.animateColor(
         initialValue = AlertRed,
