@@ -1,20 +1,29 @@
 package com.bulgyeong.safetyapp.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bulgyeong.safetyapp.ui.theme.*
+
+val FigmaGreen = Color(0xFF87FF87)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,13 +34,44 @@ fun LotoScreen(onNavigateToMain: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("LOTO 체크리스트", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = FigmaYellow,
-                    titleContentColor = FigmaBlack
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .background(FigmaYellow),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "LOTO CHECK",
+                    fontSize = 24.sp,
+                    color = FigmaBlack
                 )
-            )
+            }
+        },
+        bottomBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .background(FigmaYellow, RoundedCornerShape(1000.dp))
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .background(FigmaWhite, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Person, contentDescription = "Profile", tint = FigmaGray)
+                    }
+                    Text("홍길동", fontSize = 24.sp, color = FigmaBlack, fontWeight = FontWeight.Medium)
+                }
+            }
         },
         containerColor = FigmaWhite
     ) { padding ->
@@ -39,21 +79,26 @@ fun LotoScreen(onNavigateToMain: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("B-Deck 메인 밸브실", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = FigmaBlack)
-            Text("작업 전 아래 항목들을 QR 스캔하여 안전을 확인하세요.", color = FigmaGray)
+            Text(
+                text = "Lolem Ipsum 체크리스트",
+                fontSize = 24.sp,
+                color = FigmaBlack,
+                textAlign = TextAlign.Center
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             LotoQrItem(
-                text = "메인 전원 차단 (Lockout)",
+                text = "B-메인 가스벨브",
                 checked = loto1Checked,
                 onScanClick = { loto1Checked = true }
             )
             LotoQrItem(
-                text = "가스 밸브 잠금 및 Tagout",
+                text = "CNG 가스 벨브",
                 checked = loto2Checked,
                 onScanClick = { loto2Checked = true }
             )
@@ -88,38 +133,38 @@ fun LotoQrItem(text: String, checked: Boolean, onScanClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (checked) NeonGreen.copy(alpha = 0.2f) else FigmaLightGray, RoundedCornerShape(16.dp))
-            .padding(16.dp),
+            .height(72.dp)
+            .background(if (checked) FigmaGreen else FigmaWhite, RoundedCornerShape(1000.dp))
+            .border(BorderStroke(2.dp, FigmaBlack), RoundedCornerShape(1000.dp))
+            .padding(horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = text,
-                color = FigmaBlack,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium
-            )
-            if (checked) {
-                Text("확인 완료", color = NeonGreen, fontWeight = FontWeight.Bold)
-            }
-        }
+        Text(
+            text = text,
+            color = FigmaBlack,
+            fontSize = 22.sp
+        )
         
-        if (checked) {
-            Icon(Icons.Default.CheckCircle, contentDescription = "Checked", tint = NeonGreen, modifier = Modifier.size(40.dp))
-        } else {
-            IconButton(
-                onClick = onScanClick,
-                modifier = Modifier
-                    .background(FigmaYellow, RoundedCornerShape(8.dp))
-                    .size(48.dp)
-            ) {
-                Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan", tint = FigmaBlack)
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(FigmaBlack, CircleShape)
+                .clip(CircleShape)
+                .clickable(enabled = !checked) { onScanClick() },
+            contentAlignment = Alignment.Center
+        ) {
+            if (checked) {
+                Icon(Icons.Default.Check, contentDescription = "Checked", tint = FigmaWhite, modifier = Modifier.size(32.dp))
+            } else {
+                Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan", tint = FigmaWhite, modifier = Modifier.size(28.dp))
             }
         }
     }
 }
 
+// Added comment: The render issue (ClassNotFoundException) was fixed by adding 
+// debugImplementation("androidx.compose.ui:ui-tooling") to the app's build.gradle.kts.
 @androidx.compose.ui.tooling.preview.Preview
 @Composable
 fun LotoScreenPreview() {
