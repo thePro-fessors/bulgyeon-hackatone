@@ -61,6 +61,8 @@ fun SafetyAppNavigation() {
                 }
             )
         }
+
+
         composable("loto") {
             LotoScreen(
                 onNavigateToMain = {
@@ -77,6 +79,23 @@ fun SafetyAppNavigation() {
                 }
             )
         }
+
+        composable("dead_man") {
+            DeadManScreen(
+                onSafeConfirmed = {
+                    // 작업자가 터치해서 해제하면 다시 원래 메인 지도 화면으로 복귀
+                    navController.popBackStack()
+                },
+                onTimeoutExpired = {
+                    // 시간 초과 시 아래에 있는 emergency 화면으로 강제 이동
+                    navController.navigate("emergency") {
+                        // 경고창은 지워버려서 뒤로가기 못하게 방지
+                        popUpTo("dead_man") { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable("emergency") {
             EmergencyScreen(
                 onCancel = {
